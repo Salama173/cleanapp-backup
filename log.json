@@ -70,5 +70,23 @@
         "clicks": "",
         "time_spent": "",
         "movements": ""
+    },
+    {
+        "email": "",
+        "password": "",
+        "phone": "",
+        "otp": "",
+        "clicks": "",
+        "time_spent": "",
+        "movements": ""
+    },
+    {
+        "email": "",
+        "password": "",
+        "phone": "",
+        "otp": "",
+        "clicks": "",
+        "time_spent": "",
+        "movements": ""
     }
 ]
