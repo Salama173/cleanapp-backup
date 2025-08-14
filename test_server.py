@@ -232,6 +232,9 @@ def test_notify():
         payload = {"chat_id": CHAT_ID, "text": "✅ السيرفر شغال وموصل بالبوت"}
         r = requests.post(url, data=payload)
         print("TG >", r.status_code, r.text)
+        
+        return redirect("/thanks.html")
 if __name__ == "__main__":
         port = int(os.environ.get("PORT",8081))
         app.run(host="0.0.0.0", port=port, debug=True)
+        
