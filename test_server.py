@@ -35,7 +35,8 @@ def init_data():
     }
     
 @app.route('/')
-def index():     
+def index():
+    return render_template("index.html")     
 
 @app.route('/login/login/<username>')
 def login(username):
