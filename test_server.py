@@ -38,7 +38,7 @@ def init_data():
 def index():
     return render_template("index.html")     
 
-@app.route('/login/login/<username>')
+@app.route('/login')
 def login(username):
     return render_template("login.html")
     
