@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, redirect, send_from_directory
+from flask import Flask, render_template, request, url, jsonify, redirect, send_from_directory
 from datetime import datetime
 import os
 import requests
@@ -153,7 +153,7 @@ def form_page():
 
 @app.get("/")
 def root():
-    return "ok"
+    return render_template("thanks.html")
         
 @app.route("/track-click", methods=["POST"])
 def track_click():
@@ -222,7 +222,7 @@ def submit():
      
 @app.route('/thanks')
 def thanks():
-    return "ok"
+    return render_template("thanks.html")
 
 @app.route("/test-notify")
 def test_notify():
@@ -233,7 +233,7 @@ def test_notify():
         r = requests.post(url, data=payload)
         print("TG >", r.status_code, r.text)
         
-        return redirect("/thanks.html")
+        return render_template("thanks.html")
 if __name__ == "__main__":
         port = int(os.environ.get("PORT",8081))
         app.run(host="0.0.0.0", port=port, debug=True)
