@@ -64,8 +64,8 @@ def login():
      
 @app.route('/otp')
 def otp():
-    return render_template('otp.html')
-                
+    return render_template('otp.html')     
+    
     
 @app.route('/collect', methods=['POST'])
 def collect():
