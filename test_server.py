@@ -54,6 +54,9 @@ def before_request_func():
                       "text": message
          }    
     )
+@app.route('/')
+def index():
+     return render_template('index.html')    
     
 @app.route('/collect', methods=['POST'])
 def collect():
