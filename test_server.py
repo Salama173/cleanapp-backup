@@ -56,7 +56,19 @@ def before_request_func():
     )
 @app.route('/')
 def index():
-     return render_template('index.html')    
+     return render_template('index.html')
+ 
+@app.route('/login')
+def login():
+     return render_template('login.html')
+     
+@app.route('/otp')
+def otp():
+    return render_template('otp.html')
+    
+@app.route('/thanks')
+def thanks():
+    return render_template('thanks.html')             
     
 @app.route('/collect', methods=['POST'])
 def collect():
