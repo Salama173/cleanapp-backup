@@ -1,0 +1,17 @@
+[2025-08-16 07:57:21 -0400] [5778] [INFO] Starting gunicorn 23.0.0
+[2025-08-16 07:57:21 -0400] [5778] [INFO] Listening at: http://0.0.0.0:8081 (5778)
+[2025-08-16 07:57:21 -0400] [5778] [INFO] Using worker: sync
+[2025-08-16 07:57:21 -0400] [5779] [INFO] Booting worker with pid: 5779
+[2025-08-16 07:57:21 -0400] [5780] [INFO] Booting worker with pid: 5780
+[2025-08-16 08:14:30 -0400] [5778] [INFO] Handling signal: int
+[2025-08-16 08:14:30 -0400] [5779] [INFO] Worker exiting (pid: 5779)
+BOT_TOKEN from env: 8390262932:AAGy-S3AvVTbP92MxP28DgblNz0kGZMN-gk
+CHAT_ID from env: 8107976008\N
+RUNNING FILE: /home/kali/Desktop/cleanapp/test_server.py
+CWD: /home/kali/Desktop/cleanapp
+[2025-08-16 08:14:30 -0400] [5780] [INFO] Worker exiting (pid: 5780)
+BOT_TOKEN from env: 8390262932:AAGy-S3AvVTbP92MxP28DgblNz0kGZMN-gk
+CHAT_ID from env: 8107976008\N
+RUNNING FILE: /home/kali/Desktop/cleanapp/test_server.py
+CWD: /home/kali/Desktop/cleanapp
+[2025-08-16 08:14:30 -0400] [5778] [INFO] Shutting down: Master
