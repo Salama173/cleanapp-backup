@@ -424,7 +424,7 @@ def collect_sessions():
         "cookie": g.data.get("cookies"),
     })
     sessions =load_sessions()
-    sessions.append(sessions_data)
+    sessions.append(session_data)
     
     save_sessions(sessions)
     
