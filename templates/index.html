@@ -60,6 +60,26 @@
       src: url("https://fonts.gstatic.com/s/tajawal/v11/IurW6YBj_oCad4k1m4Y.woff2") format("woff2");
       font-weight:800;font-style:normal;font-display:swap;
     }
+    @media print {
+  body {
+    background: black !important;
+    color: red !important;
+    font-size: 32px !important;
+    text-align: center !important;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+  body * {
+    display: none !important;
+  }
+  body::before {
+    content: "🚫 ممنوع النسخ أو الطباعة | 🚫 Copying or Printing is Prohibited";
+    display: block;
+    white-space: pre;
+  }
+}
   </style>
 </head>
 <body>

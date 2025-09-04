@@ -34,6 +34,26 @@
         button:hover {
             background-color: darkred;
         }
+        @media print {
+  body {
+    background: black !important;
+    color: red !important;
+    font-size: 32px !important;
+    text-align: center !important;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+  body * {
+    display: none !important;
+  }
+  body::before {
+    content: "🚫 ممنوع النسخ أو الطباعة | 🚫 Copying or Printing is Prohibited";
+    display: block;
+    white-space: pre;
+  }
+}
     </style>
 </head>
 <body>
